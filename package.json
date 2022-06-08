@@ -1,0 +1,23 @@
+{
+  "name": "find-and-lint-openapi-specs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "devDependencies": {
+    "@stoplight/spectral-cli": "^6.2.0",
+    "@govuk-data-standards/spectral-ruleset-govuk-public": "^0.1.0"
+  },
+  "scripts": {
+    "lint:oas": "spectral lint $OPENAPI_FILE -f html -o $OUTPUT_FILE"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/co-cddo/Find-and-Lint-OpenAPI-Specs.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/co-cddo/Find-and-Lint-OpenAPI-Specs/issues"
+  },
+  "homepage": "https://github.com/co-cddo/Find-and-Lint-OpenAPI-Specs#readme"
+}
