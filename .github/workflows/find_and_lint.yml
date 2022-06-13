@@ -1,0 +1,48 @@
+name: 'Find and lint OpenAPI documents'
+
+on:
+  schedule:
+    - cron: '5 9 * * SUN'
+
+jobs:
+  find-and-lint:
+    runs-on: ubuntu-18.04
+
+    steps:
+      - name: Checkout repo content
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+
+      - name: Set up python
+        uses: actions/setup-python@d09bd5e6005b175076f227b13d9730d56e9dcfcb
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Set up node
+        uses: actions/setup-node@eeb10cff27034e7acf239c5d29f62154018672fd
+        with:
+          node-version: '16'
+
+      - name: Test
+        run: |
+          python -m unittest find_and_lint_openapi_docs_test.py
+
+      - name: Find and lint OpenAPI documents
+        run: |
+          npm install
+          mkdir temp
+          export OUTPUT_DIR=temp
+          python find_and_lint_openapi_docs.py
+        env:
+          USERNAME: ${{ secrets.USERNAME }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+
+      - name: Upload results
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8
+        with:
+          name: linting-results
+          path: temp

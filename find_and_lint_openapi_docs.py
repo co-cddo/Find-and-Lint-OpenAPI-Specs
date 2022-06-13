@@ -5,8 +5,8 @@ import requests
 
 
 def find_openapi_docs():
-    user_name = os.environ['GITHUB_USERNAME']
-    access_token = os.environ['GITHUB_API_TOKEN']
+    user_name = os.environ['USERNAME']
+    access_token = os.environ['API_TOKEN']
     headers = {'Accept': 'application/vnd.github.v3+json'}
     query_url = 'https://api.github.com/search/code'
 
@@ -49,14 +49,14 @@ def lint_the_openapi_docs(openapi_docs):
     output_dir = os.environ['OUTPUT_DIR']
     count = 1
     for f in openapi_docs:
-        output_file = output_dir + str(count) + '.html'
+        output_file = output_dir + '/' + str(count) + '.html'
         os.system('OPENAPI_FILE=' + f + ' OUTPUT_FILE=' + output_file + ' npm run lint:oas')
         count = count + 1
 
 
 def is_an_archived_repository(item):
-    user_name = os.environ['GITHUB_USERNAME']
-    access_token = os.environ['GITHUB_API_TOKEN']
+    user_name = os.environ['USERNAME']
+    access_token = os.environ['API_TOKEN']
     repository_name = item['repository']['full_name']
     query_url = 'https://api.github.com/repos/' + repository_name
     headers = {'Accept': 'application/vnd.github.v3+json'}

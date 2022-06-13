@@ -18,7 +18,7 @@ class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
             '/example/source/pets.yml',
             result)
 
-    @mock.patch.dict(os.environ, {"GITHUB_USERNAME": "test_username", "GITHUB_API_TOKEN": "test_token"})
+    @mock.patch.dict(os.environ, {"USERNAME": "test_username", "API_TOKEN": "test_token"})
     @patch('find_and_lint_openapi_docs.requests.get')
     def test_is_an_archived_repository(self, mock_get):
         item = {'repository': {'full_name': 'test_name'}}
@@ -30,7 +30,7 @@ class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
 
         self.assertTrue(result)
 
-    @mock.patch.dict(os.environ, {"GITHUB_USERNAME": "test_username", "GITHUB_API_TOKEN": "test_token"})
+    @mock.patch.dict(os.environ, {"USERNAME": "test_username", "API_TOKEN": "test_token"})
     @patch('find_and_lint_openapi_docs.requests.get')
     def test_is_not_an_archived_repository(self, mock_get):
         item = {'repository': {'full_name': 'test_name'}}
