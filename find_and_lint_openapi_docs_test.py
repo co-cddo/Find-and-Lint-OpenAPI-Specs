@@ -3,7 +3,7 @@ import unittest
 from unittest import mock
 from unittest.mock import Mock, patch
 
-from find_and_lint_openapi_docs import convert_to_raw_content_url, is_an_archived_repository
+from find_and_lint_openapi_docs import convert_to_raw_content_url, is_an_archived_repository, get_api_name, get_api_description
 
 
 class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
@@ -41,3 +41,42 @@ class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
         result = is_an_archived_repository(item)
 
         self.assertFalse(result)
+
+    @patch('find_and_lint_openapi_docs.get_api_info_object')
+    def test_get_api_name(self, my_mock):
+        html_url = 'https://github.com/test/test-api/blob/abc123/openapi.yml'
+        my_mock.return_value = {'version': '1.0.0', 'title': 'Test title', 'description': 'Test description', 'license': {'name': 'MIT'}}
+
+        result = get_api_name(html_url)
+
+        self.assertEqual('Test title', result)
+
+    @patch('find_and_lint_openapi_docs.get_api_info_object')
+    def test_get_api_name_from_file_without_title_field(self, my_mock):
+        html_url = 'https://github.com/test/test-api/blob/abc123/openapi.yml'
+        my_mock.return_value = {'version': '1.0.0', 'description': 'Test description', 'license': {'name': 'MIT'}}
+
+        result = get_api_name(html_url)
+
+        self.assertEqual('N/A', result)
+
+    @patch('find_and_lint_openapi_docs.get_api_info_object')
+    def test_get_api_description(self, my_mock):
+        html_url = 'https://github.com/test/test-api/blob/abc123/openapi.yml'
+        my_mock.return_value = {'version': '1.0.0', 'title': 'Test title', 'description': 'Test description.\n It has multiple lines.', 'license': {'name': 'MIT'}}
+
+        result = get_api_description(html_url)
+
+        self.assertEqual('Test description.', result)
+
+    @patch('find_and_lint_openapi_docs.get_api_info_object')
+    def test_get_api_description_from_file_without_description_field(self, my_mock):
+        html_url = 'https://github.com/test/test-api/blob/abc123/openapi.yml'
+        my_mock.return_value = {'version': '1.0.0', 'title': 'Test title', 'license': {'name': 'MIT'}}
+
+        result = get_api_description(html_url)
+
+        self.assertEqual('N/A', result)
+
+
+
