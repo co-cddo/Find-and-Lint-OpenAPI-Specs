@@ -3,13 +3,16 @@ alphagov
 BEACmodel
 britishlibrary
 cabinetoffice
+CefasRepRes
 CJSCommonPlatform
 communitiesuk
 companieshouse
+co-cddo
 datagovuk
 datasciencecampus
 decc
 defra
+department-for-transport
 DFE-Digital
 dfid
 digital-preservation
@@ -17,6 +20,7 @@ dstl
 dvla
 dvsa
 dwp
+FoodStandardsAgency
 GCHQ
 gds-dead
 gds-operations
@@ -57,6 +61,7 @@ SkillsFundingAgency
 ukforeignoffice
 ukgovdatascience
 UKGovernmentBEIS
+UKHO
 UKHomeOffice
 UKLocation
 ukncsc
