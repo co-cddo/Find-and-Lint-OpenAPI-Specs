@@ -59,7 +59,7 @@ def lint_the_openapi_docs(openapi_docs):
     output_dir = os.environ['OUTPUT_DIR']
     count = 1
     for f in openapi_docs:
-        output_file = output_dir + '/' + str(count) + '.html'
+        output_file = os.path.join(output_dir, str(count) + '.html')
         os.system('OPENAPI_FILE=' + f + ' OUTPUT_FILE=' + output_file + ' npm run lint:oas')
         count = count + 1
 
