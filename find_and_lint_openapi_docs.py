@@ -75,12 +75,12 @@ def is_an_archived_repository(item):
 def write_api_metadata_to_file(html_urls):
     output_dir = os.environ['OUTPUT_DIR']
     file_path = os.path.join(output_dir, 'descriptions.csv')
-    header = ['url', 'name', 'description']
+    header = ['raw_url', 'url', 'name', 'description']
     with open(file_path, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         for html_url in html_urls:
-            writer.writerow([html_url, get_api_name(html_url), get_api_description(html_url)])
+            writer.writerow([convert_to_raw_content_url(html_url), html_url, get_api_name(html_url), get_api_description(html_url)])
 
 
 def get_raw_openapi_content(url):
