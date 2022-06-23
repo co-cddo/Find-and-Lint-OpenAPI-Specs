@@ -13,7 +13,7 @@ def create_htmlpaths(path):
 
     for filename in os.listdir(input_path):
         if filename.endswith("html"):
-            htmlpaths.append(input_path + filename)
+            htmlpaths.append(os.path.join(input_path, filename))
     return htmlpaths
 
 
@@ -118,9 +118,8 @@ def create_dataframe(htmlpath):
 
 
 def createwarningstab(dataframe):
-    warningsdf = dataframe.groupby(['Information about the warning or error', 'Warning or Error']).count().sort_values(
-        by='URL').reset_index()
-    warningsdf = warningsdf[['Information about the warning or error', 'Warning or Error', 'URL']]
+    warningsdf = dataframe.groupby(['Information about the warning or error', 'Warning or Error']).count().sort_values(by='Raw URL').reset_index()
+    warningsdf = warningsdf[['Information about the warning or error', 'Warning or Error', 'Raw URL']]
     warningsdf.columns = ['Information about the warning or error', 'Warning or Error',
                           'COUNTA of Information about the warning or error']
 
@@ -128,7 +127,7 @@ def createwarningstab(dataframe):
 
 #creates an API Version tab
 def versions(dataframe):
-    APIversionsdf = dataframe.groupby(['API Version', 'URL']).count().sort_values(by='API Version').reset_index()
+    APIversionsdf = dataframe.groupby(['API Version', 'Raw URL']).count().sort_values(by='API Version').reset_index()
     APIversionsdf = APIversionsdf.groupby(['API Version']).count().sort_values(by='API Version').reset_index()
     APIversionsdf = APIversionsdf[['API Version', 'Warning or Error']]
     APIversionsdf.columns = ['API Version', 'New Total']
@@ -140,7 +139,7 @@ def passfailtab(dataframe):
     Pass_fail_df = dataframe
     Pass_fail_df["Warning Total per Row"] = pd.to_numeric(Pass_fail_df["Warning Total per Row"])
     Pass_fail_df[["Warning Total per Row", "Error Total per Row"]] = Pass_fail_df[["Warning Total per Row", "Error Total per Row"]].apply(pd.to_numeric)
-    Pass_fail_df = Pass_fail_df.groupby(['Organisation', 'URL'])[['Error Total per Row', "Warning Total per Row"]].sum()
+    Pass_fail_df = Pass_fail_df.groupby(['Organisation', 'Raw URL'])[['Error Total per Row', "Warning Total per Row"]].sum()
     Pass_fail_df.reset_index(inplace=True)
     Pass_fail_df['Pass or Fail'] = Pass_fail_df['Error Total per Row'].apply(lambda x: 'Fail' if x >= 1 else 'Pass')
 
@@ -152,7 +151,7 @@ input_path = os.environ['OUTPUT_DIR']
 output_path = os.environ['OUTPUT_DIR']
 
 #final function that takes takes the input_path and then creates a list of htmls through function create_html and returns an Excel Spreadsheet
-def create_spreadsheet(input_path):
+def create_spreadsheet():
     listofdfs = []
     htmlpaths = create_htmlpaths(input_path)
     for p in htmlpaths:
@@ -175,14 +174,16 @@ def create_spreadsheet(input_path):
     no_dupes_finaldf = pd.merge(df, no_dupes_new_df, on='join', how='left')
     # merges df with duplicates with df on join column
     dupes_finaldf = pd.merge(df, new_df, on='join', how='left')
-    # drops redundant columns
-    no_dupes_finaldf = no_dupes_finaldf.drop(columns=['Description', 'Title', 'join', 'raw_url'])
-    dupes_finaldf = dupes_finaldf.drop(columns=['Description', 'Title', 'join', 'raw_url'])
+
 
     # creates 3 extra tabs
     warningsdf = createwarningstab(no_dupes_finaldf)
     APIversionsdf = versions(no_dupes_finaldf)
     pass_fail_df = passfailtab(no_dupes_finaldf)
+
+    # drops redundant columns
+    no_dupes_finaldf = no_dupes_finaldf.drop(columns=['Description', 'Title', 'join', 'raw_url'])
+    dupes_finaldf = dupes_finaldf.drop(columns=['Description', 'Title', 'join', 'raw_url'])
 
     # no duplicates excel creation
     list_newdfs = [no_dupes_finaldf, warningsdf, APIversionsdf, pass_fail_df]
@@ -190,8 +191,8 @@ def create_spreadsheet(input_path):
     newdict = dict(zip(sheetnames_list, list_newdfs))
 
     todays_date = date.today()
-    filename = 'No duplication Linting-results' + str(todays_date)
-    with pd.ExcelWriter('{}{}.xlsx'.format(output_path, filename), engine="xlsxwriter", mode="w") as writer:
+    filename2 = 'No duplication Linting-results' + str(todays_date)
+    with pd.ExcelWriter('{}.xlsx'.format(os.path.join(output_path, filename2)), engine="xlsxwriter", mode="w") as writer:
         for x, y in zip(sheetnames_list, list_newdfs):
             y.to_excel(writer, sheet_name=x, index=False)
 
@@ -201,12 +202,12 @@ def create_spreadsheet(input_path):
     newdict2 = dict(zip(dupes_sheetnames_list, dupes_list_newdfs))
 
     todays_date = date.today()
-    filename = 'Duplicated Linting-results' + str(todays_date)
-    with pd.ExcelWriter('{}{}.xlsx'.format(output_path, filename), engine="xlsxwriter", mode="w") as writer:
+    filename3 = 'Duplicated Linting-results' + str(todays_date)
+    with pd.ExcelWriter('{}.xlsx'.format(os.path.join(output_path, filename3)), engine="xlsxwriter", mode="w") as writer:
         for x, y in zip(dupes_sheetnames_list, dupes_list_newdfs):
             y.to_excel(writer, sheet_name=x, index=False)
 
     return
 
 if __name__ == '__main__':
-    create_spreadsheet(input_path)
+    create_spreadsheet()
