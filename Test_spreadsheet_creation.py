@@ -7,7 +7,8 @@ from datetime import date
 import requests
 import json
 
-#creates a list of htmls to parse through
+
+# creates a list of htmls to parse through
 def create_htmlpaths(path):
     htmlpaths = []
 
@@ -90,7 +91,8 @@ def checksjsoninurl(url):
 
     return title, version
 
-#creates a dataframe
+
+# creates a dataframe
 def create_dataframe(htmlpath):
     with open(htmlpath) as rawhtml:
         soup = BeautifulSoup(rawhtml, "html.parser")
@@ -110,10 +112,10 @@ def create_dataframe(htmlpath):
         html_df['Description'] = description
         title, version = checksjsoninurl(urlonly)
         version = str(version).replace('"', '').replace("'", '')
-        html_df['API Version'] = version
+        html_df['API Version Used'] = version
         html_df['Title'] = str(title).strip()
         today = pd.to_datetime("today").strftime("%m/%d/%Y")
-        html_df['Date of Creation'] = today
+        html_df['Date of Scrape'] = today
         html_df['Warning Total per Row'] = html_df['Warning or Error'].apply(lambda x: '1' if x == 'warning' else '0')
         html_df['Error Total per Row'] = html_df['Warning or Error'].apply(lambda x: '1' if x == 'error' else '0')
 
@@ -121,39 +123,64 @@ def create_dataframe(htmlpath):
 
 
 def createwarningstab(dataframe):
-    warningsdf = dataframe.groupby(['Information about the warning or error', 'Warning or Error']).count().sort_values(by='Raw URL').reset_index()
+    warningsdf = dataframe.groupby(['Information about the warning or error', 'Warning or Error']).count().sort_values(
+        by='Raw URL').reset_index()
     warningsdf = warningsdf[['Information about the warning or error', 'Warning or Error', 'Raw URL']]
     warningsdf.columns = ['Information about the warning or error', 'Warning or Error',
                           'COUNTA of Information about the warning or error']
 
     return warningsdf
 
-#creates an API Version tab
+
+# creates an API Version tab
 def versions(dataframe):
-    APIversionsdf = dataframe.groupby(['API Version', 'Raw URL']).count().sort_values(by='API Version').reset_index()
-    APIversionsdf = APIversionsdf.groupby(['API Version']).count().sort_values(by='API Version').reset_index()
-    APIversionsdf = APIversionsdf[['API Version', 'Warning or Error']]
-    APIversionsdf.columns = ['API Version', 'New Total']
+    APIversionsdf = dataframe.groupby(['API Version Used', 'Raw URL']).count().sort_values(
+        by='API Version Used').reset_index()
+    APIversionsdf = APIversionsdf.groupby(['API Version Used']).count().sort_values(by='API Version Used').reset_index()
+    APIversionsdf = APIversionsdf[['API Version Used', 'Warning or Error']]
+    APIversionsdf.columns = ['API Version Used', 'New Total']
 
     return APIversionsdf
 
-#creates a pass fail tab
+
+# creates a pass fail tab, now with org name as a field
 def passfailtab(dataframe):
     Pass_fail_df = dataframe
     Pass_fail_df["Warning Total per Row"] = pd.to_numeric(Pass_fail_df["Warning Total per Row"])
-    Pass_fail_df[["Warning Total per Row", "Error Total per Row"]] = Pass_fail_df[["Warning Total per Row", "Error Total per Row"]].apply(pd.to_numeric)
-    Pass_fail_df = Pass_fail_df.groupby(['Organisation', 'Raw URL'])[['Error Total per Row', "Warning Total per Row"]].sum()
+    Pass_fail_df[["Warning Total per Row", "Error Total per Row"]] = Pass_fail_df[
+        ["Warning Total per Row", "Error Total per Row"]].apply(pd.to_numeric)
+    Pass_fail_df = Pass_fail_df.groupby(['Organisation', 'org name', 'Raw URL', 'last updated', 'Last update of API Doc'])[
+        ['Error Total per Row', "Warning Total per Row"]].sum()
     Pass_fail_df.reset_index(inplace=True)
     Pass_fail_df['Pass or Fail'] = Pass_fail_df['Error Total per Row'].apply(lambda x: 'Fail' if x >= 1 else 'Pass')
 
     return Pass_fail_df
 
 
-#input & output path
+# take the url column from the dataframe
+def get_last_commit(url):
+    if url != 'nan':
+        slashparts = str(url).split('/')
+        org = slashparts[3]
+        repo = slashparts[4]
+        path = '/'.join(slashparts[7:])
+        user_name = os.environ['USERNAME']
+        access_token = os.environ['API_TOKEN']
+        query_url = f'https://api.github.com/repos/{org}/{repo}/commits?path={path}'
+        r = requests.get(query_url, auth=(user_name, access_token))
+        response = r.json()
+        commit_date = response[0]['commit']['author']['date']
+        return commit_date
+    else:
+        return 'Not Found'
+
+
+# input & output path
 input_path = os.environ['OUTPUT_DIR']
 output_path = os.environ['OUTPUT_DIR']
 
-#final function that takes takes the input_path and then creates a list of htmls through function create_html and returns an Excel Spreadsheet
+
+# final function that takes takes the input_path and then creates a list of htmls through function create_html and returns an Excel Spreadsheet
 def create_spreadsheet():
     listofdfs = []
     htmlpaths = create_htmlpaths(input_path)
@@ -177,7 +204,25 @@ def create_spreadsheet():
     no_dupes_finaldf = pd.merge(df, no_dupes_new_df, on='join', how='left')
     # merges df with duplicates with df on join column
     dupes_finaldf = pd.merge(df, new_df, on='join', how='left')
+    dupes_finaldf['url'] = dupes_finaldf['url'].astype(str)
 
+    # creates unique values
+    uniques = no_dupes_finaldf['url'].unique()
+    # drops all nans
+    filtered = [element for element in uniques if str(element) != 'nan']
+
+    commits = []
+    for x in filtered:
+        date_commits = get_last_commit(x)
+        commits.append(date_commits)
+
+    # creates a dictionary of the two lists
+    data = {'url': filtered, 'Last update of API Doc': commits}
+    # creates a 2nd data frame from the dictionary
+    df2 = pd.DataFrame.from_dict(data)
+
+    #merges the 2 dataframes on the original
+    no_dupes_finaldf = pd.merge(no_dupes_finaldf, df2, on='url', how='left')
 
     # creates 3 extra tabs
     warningsdf = createwarningstab(no_dupes_finaldf)
@@ -195,7 +240,8 @@ def create_spreadsheet():
 
     todays_date = date.today()
     filename2 = 'No duplication Linting-results' + str(todays_date)
-    with pd.ExcelWriter('{}.xlsx'.format(os.path.join(output_path, filename2)), engine="xlsxwriter", mode="w") as writer:
+    with pd.ExcelWriter('{}.xlsx'.format(os.path.join(output_path, filename2)), engine="xlsxwriter",
+                        mode="w") as writer:
         for x, y in zip(sheetnames_list, list_newdfs):
             y.to_excel(writer, sheet_name=x, index=False)
 
@@ -206,11 +252,13 @@ def create_spreadsheet():
 
     todays_date = date.today()
     filename3 = 'Duplicated Linting-results' + str(todays_date)
-    with pd.ExcelWriter('{}.xlsx'.format(os.path.join(output_path, filename3)), engine="xlsxwriter", mode="w") as writer:
+    with pd.ExcelWriter('{}.xlsx'.format(os.path.join(output_path, filename3)), engine="xlsxwriter",
+                        mode="w") as writer:
         for x, y in zip(dupes_sheetnames_list, dupes_list_newdfs):
             y.to_excel(writer, sheet_name=x, index=False)
 
     return
+
 
 if __name__ == '__main__':
     create_spreadsheet()
