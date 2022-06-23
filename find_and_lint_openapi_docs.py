@@ -29,7 +29,8 @@ def find_openapi_docs():
 
             for item in items:
                 html_url = item['html_url']
-                if not is_an_archived_repository(item) and 'test' not in item['html_url']:
+                test_repos = ["test", "Test"]
+                if not is_an_archived_repository(item) and not any(x in html_url for x in test_repos) and get_api_info_object(html_url):
                     html_urls.append(html_url)
 
             # Wait to avoid hitting the GitHub API secondary rate limit
@@ -93,17 +94,19 @@ def get_raw_openapi_content(url):
 
 def get_api_info_object(html_url):
     content = get_raw_openapi_content(html_url)
-    dct = None
+    deserialized_content = {}
     try:
         if html_url.endswith(('.yml', '.yaml')):
-            dct = yaml.safe_load(content)
+            deserialized_content = yaml.safe_load(content)
         elif html_url.endswith('json'):
-            dct = json.loads(content)
+            deserialized_content = json.loads(content)
     except (yaml.YAMLError, json.JSONDecodeError):
         logging.info("Error while parsing OpenAPI file")
         return 'N/A'
-    if 'info' in dct:
-        return dct['info']
+    if 'info' in deserialized_content:
+        return deserialized_content['info']
+    else:
+        return {}
 
 
 def get_api_name(html_url):
