@@ -32,7 +32,10 @@ def create_url(htmlpath):
 
 # if checksjsoninurl function says it has found json
 def withjsoninurl(url):
-    r2 = requests.get(url).json()
+    try:
+        r2 = requests.get(url).json()
+    except requests.exceptions.RequestException:
+        return 'Not found', 'Not found'
     if 'openapi' in r2:
         version = r2['openapi']
     else:
