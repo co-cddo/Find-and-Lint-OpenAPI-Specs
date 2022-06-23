@@ -36,7 +36,7 @@ jobs:
           npm install
           mkdir temp
           export OUTPUT_DIR=temp
-          python find_and_lint_openapi_docs.py
+          python main.py
         env:
           USERNAME: ${{ secrets.USERNAME }}
           API_TOKEN: ${{ secrets.API_TOKEN }}
