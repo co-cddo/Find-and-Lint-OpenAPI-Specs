@@ -1,7 +1,7 @@
 import os
 import unittest
 from unittest import mock
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from find_and_lint_openapi_docs import convert_to_raw_content_url, is_an_archived_repository, get_api_name, \
     get_api_description, get_organisation_name, get_api_version, get_last_commit_date
@@ -23,9 +23,7 @@ class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
     @patch('find_and_lint_openapi_docs.requests.get')
     def test_is_an_archived_repository(self, mock_get):
         item = {'repository': {'full_name': 'test_name'}}
-        mock_result = {'archived': True}
-        mock_get.return_value = Mock()
-        mock_get.return_value.json.return_value = mock_result
+        mock_get.return_value.json.return_value = {'archived': True}
 
         result = is_an_archived_repository(item)
 
@@ -35,9 +33,7 @@ class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
     @patch('find_and_lint_openapi_docs.requests.get')
     def test_is_not_an_archived_repository(self, mock_get):
         item = {'repository': {'full_name': 'test_name'}}
-        mock_result = {'archived': False}
-        mock_get.return_value = Mock()
-        mock_get.return_value.json.return_value = mock_result
+        mock_get.return_value.json.return_value = {'archived': False}
 
         result = is_an_archived_repository(item)
 
