@@ -8,13 +8,12 @@ import yaml
 import logging
 
 
-def find_openapi_docs():
+def find_apis():
     user_name = os.environ['USERNAME']
     access_token = os.environ['API_TOKEN']
     headers = {'Accept': 'application/vnd.github.v3+json'}
     query_url = 'https://api.github.com/search/code'
-
-    html_urls = []
+    api_details = []
 
     with open('organisations.txt') as f:
         lines = f.readlines()
@@ -30,13 +29,15 @@ def find_openapi_docs():
             for item in items:
                 html_url = item['html_url']
                 test_repos = ["test", "Test"]
-                if not is_an_archived_repository(item) and not any(x in html_url for x in test_repos) and get_api_info_object(html_url):
-                    html_urls.append(html_url)
+                if not is_an_archived_repository(item) and not any(
+                        x in html_url for x in test_repos) and get_api_info_object(html_url):
+                    info_object = get_api_info_object(html_url)
+                    api_details.append([convert_to_raw_content_url(html_url), html_url, get_api_name(info_object), get_api_description(info_object), get_api_version(info_object), get_organisation_name(organisation), get_last_commit_date(item)])
 
             # Wait to avoid hitting the GitHub API secondary rate limit
             time.sleep(20)
 
-        return html_urls
+        return api_details
 
 
 def convert_to_raw_content_url(html_url):
@@ -57,7 +58,7 @@ def lint_the_openapi_docs(openapi_docs):
     count = 1
     for f in openapi_docs:
         output_file = os.path.join(output_dir, str(count) + '.html')
-        os.system('OPENAPI_FILE=' + f + ' OUTPUT_FILE=' + output_file + ' npm run lint:oas')
+        os.system('OPENAPI_FILE=' + f[0] + ' OUTPUT_FILE=' + output_file + ' npm run lint:oas')
         count = count + 1
 
 
@@ -72,15 +73,15 @@ def is_an_archived_repository(item):
     return response['archived']
 
 
-def write_api_metadata_to_file(html_urls):
+def write_api_metadata_to_file(apis):
     output_dir = os.environ['OUTPUT_DIR']
     file_path = os.path.join(output_dir, 'descriptions.csv')
-    header = ['raw_url', 'url', 'name', 'description']
+    header = ['raw_url', 'url', 'name', 'description', 'API version', 'org name', 'last updated']
     with open(file_path, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
-        for html_url in html_urls:
-            writer.writerow([convert_to_raw_content_url(html_url), html_url, get_api_name(html_url), get_api_description(html_url)])
+        for api in apis:
+            writer.writerow(api)
 
 
 def get_raw_openapi_content(url):
@@ -109,26 +110,52 @@ def get_api_info_object(html_url):
         return {}
 
 
-def get_api_name(html_url):
-    item = get_api_info_object(html_url)
-    if 'title' in item:
-        return item['title']
+def get_api_name(info_object):
+    if 'title' in info_object:
+        return info_object['title']
     else:
         return 'N/A'
 
 
-def get_api_description(html_url):
-    item = get_api_info_object(html_url)
-    if 'description' in item:
-        description = item['description']
+def get_api_description(info_object):
+    if 'description' in info_object:
+        description = info_object['description']
         description = description.replace('\n', '. ')
         return description.split('. ')[0]
     else:
         return 'N/A'
 
 
+def get_api_version(info_object):
+    if 'version' in info_object:
+        return info_object['version']
+    else:
+        return 'N/A'
+
+
+def get_organisation_name(organisation):
+    user_name = os.environ['USERNAME']
+    access_token = os.environ['API_TOKEN']
+    query_url = 'https://api.github.com/orgs/' + organisation
+    headers = {'Accept': 'application/vnd.github.v3+json'}
+    r = requests.get(query_url, headers=headers, auth=(user_name, access_token))
+    response = r.json()
+    return response['name']
+
+
+def get_last_commit_date(item):
+    user_name = os.environ['USERNAME']
+    access_token = os.environ['API_TOKEN']
+    repository_name = item['repository']['full_name']
+    query_url = 'https://api.github.com/repos/' + repository_name + '/commits'
+    headers = {'Accept': 'application/vnd.github.v3+json'}
+    params = {'per_page': 1}
+    r = requests.get(query_url, headers=headers, auth=(user_name, access_token), params=params)
+    response = r.json()
+    return response[0]['commit']['committer']['date']
+
+
 if __name__ == '__main__':
-    openapi_docs = find_openapi_docs()
-    write_api_metadata_to_file(openapi_docs)
-    raw_openapi_docs = convert_github_urls_to_raw_content_urls(openapi_docs)
-    lint_the_openapi_docs(raw_openapi_docs)
+    apis = find_apis()
+    write_api_metadata_to_file(apis)
+    lint_the_openapi_docs(apis)
