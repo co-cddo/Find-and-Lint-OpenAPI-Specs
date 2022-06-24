@@ -3,7 +3,8 @@ import unittest
 from unittest import mock
 from unittest.mock import Mock, patch
 
-from find_and_lint_openapi_docs import convert_to_raw_content_url, is_an_archived_repository, get_api_name, get_api_description
+from find_and_lint_openapi_docs import convert_to_raw_content_url, is_an_archived_repository, get_api_name, \
+    get_api_description, get_organisation_name, get_api_version, get_last_commit_date
 
 
 class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
@@ -42,41 +43,65 @@ class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
 
         self.assertFalse(result)
 
-    @patch('find_and_lint_openapi_docs.get_api_info_object')
-    def test_get_api_name(self, my_mock):
-        html_url = 'https://github.com/test/test-api/blob/abc123/openapi.yml'
-        my_mock.return_value = {'version': '1.0.0', 'title': 'Test title', 'description': 'Test description', 'license': {'name': 'MIT'}}
+    def test_get_api_name(self):
+        info_object = {'version': '1.0.0', 'title': 'Test title', 'description': 'Test description',
+                       'license': {'name': 'MIT'}}
 
-        result = get_api_name(html_url)
+        result = get_api_name(info_object)
 
         self.assertEqual('Test title', result)
 
-    @patch('find_and_lint_openapi_docs.get_api_info_object')
-    def test_get_api_name_from_file_without_title_field(self, my_mock):
-        html_url = 'https://github.com/test/test-api/blob/abc123/openapi.yml'
-        my_mock.return_value = {'version': '1.0.0', 'description': 'Test description', 'license': {'name': 'MIT'}}
+    def test_get_api_name_from_file_without_title_field(self):
+        info_object = {'version': '1.0.0', 'description': 'Test description', 'license': {'name': 'MIT'}}
 
-        result = get_api_name(html_url)
+        result = get_api_name(info_object)
 
         self.assertEqual('N/A', result)
 
-    @patch('find_and_lint_openapi_docs.get_api_info_object')
-    def test_get_api_description(self, my_mock):
-        html_url = 'https://github.com/test/test-api/blob/abc123/openapi.yml'
-        my_mock.return_value = {'version': '1.0.0', 'title': 'Test title', 'description': 'Test description.\n It has multiple lines.', 'license': {'name': 'MIT'}}
+    def test_get_api_description(self):
+        info_object = {'version': '1.0.0', 'title': 'Test title',
+                       'description': 'Test description.\n It has multiple lines.', 'license': {'name': 'MIT'}}
 
-        result = get_api_description(html_url)
+        result = get_api_description(info_object)
 
         self.assertEqual('Test description.', result)
 
-    @patch('find_and_lint_openapi_docs.get_api_info_object')
-    def test_get_api_description_from_file_without_description_field(self, my_mock):
-        html_url = 'https://github.com/test/test-api/blob/abc123/openapi.yml'
-        my_mock.return_value = {'version': '1.0.0', 'title': 'Test title', 'license': {'name': 'MIT'}}
+    def test_get_api_description_from_file_without_description_field(self):
+        info_object = {'version': '1.0.0', 'title': 'Test title', 'license': {'name': 'MIT'}}
 
-        result = get_api_description(html_url)
+        result = get_api_description(info_object)
 
         self.assertEqual('N/A', result)
 
+    def test_get_api_version_from_file(self):
+        info_object = {'version': '1.0.0', 'title': 'Test title', 'license': {'name': 'MIT'}}
 
+        result = get_api_version(info_object)
 
+        self.assertEqual('1.0.0', result)
+
+    def test_get_api_version_from_file_without_version(self):
+        info_object = {'title': 'Test title', 'license': {'name': 'MIT'}}
+
+        result = get_api_version(info_object)
+
+        self.assertEqual('N/A', result)
+
+    @mock.patch.dict(os.environ, {"USERNAME": "test_username", "API_TOKEN": "test_token"})
+    @patch('find_and_lint_openapi_docs.requests.get')
+    def test_get_organisation_name(self, mock_get):
+        mock_get.return_value.json.return_value = {'login': 'test-org', 'name': 'Test Organisation'}
+
+        result = get_organisation_name('test-org')
+
+        self.assertEqual('Test Organisation', result)
+
+    @mock.patch.dict(os.environ, {"USERNAME": "test_username", "API_TOKEN": "test_token"})
+    @patch('find_and_lint_openapi_docs.requests.get')
+    def test_get_last_updated(self, mock_get):
+        item = {'repository': {'full_name': 'test_name'}}
+        mock_get.return_value.json.return_value = [{'commit': {'committer': {'date': '2022-05-16T10:17:54Z'}}}]
+
+        result = get_last_commit_date(item)
+
+        self.assertEqual('2022-05-16T10:17:54Z', result)
