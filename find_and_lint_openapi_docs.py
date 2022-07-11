@@ -76,7 +76,7 @@ def is_an_archived_repository(item):
 def write_api_metadata_to_file(apis):
     output_dir = os.environ['OUTPUT_DIR']
     file_path = os.path.join(output_dir, 'descriptions.csv')
-    header = ['raw_url', 'url', 'name', 'description', 'API version', 'org name', 'last updated']
+    header = ['raw_url', 'url', 'name', 'description', 'Version of API Doc', 'org name', 'Repo last updated']
     with open(file_path, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
