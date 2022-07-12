@@ -6,6 +6,9 @@ import json
 import requests
 import yaml
 import logging
+import sys
+
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 
 def find_apis():
@@ -25,6 +28,7 @@ def find_apis():
             r = requests.get(query_url, headers=headers, params=params, auth=(user_name, access_token))
 
             if r.status_code == 403:
+                logging.info('A secondary rate limit was hit. Waiting for 60 seconds before retrying.')
                 time.sleep(60)
                 r = requests.get(query_url, headers=headers, params=params, auth=(user_name, access_token))
 
@@ -107,7 +111,7 @@ def get_api_info_object(html_url):
         elif html_url.endswith('json'):
             deserialized_content = json.loads(content)
     except (yaml.YAMLError, json.JSONDecodeError):
-        logging.info("Error while parsing OpenAPI file")
+        logging.info("Error while parsing OpenAPI file: " + html_url)
         return 'N/A'
     if 'info' in deserialized_content:
         return deserialized_content['info']
