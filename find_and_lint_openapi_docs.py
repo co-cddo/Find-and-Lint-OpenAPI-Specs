@@ -23,6 +23,11 @@ def find_apis():
                 'q': f'openapi info paths in:file org:{organisation} extension:yml extension:yaml extension:json'
             }
             r = requests.get(query_url, headers=headers, params=params, auth=(user_name, access_token))
+
+            if r.status_code == 403:
+                time.sleep(60)
+                r = requests.get(query_url, headers=headers, params=params, auth=(user_name, access_token))
+
             response = r.json()
             items = response['items']
 
