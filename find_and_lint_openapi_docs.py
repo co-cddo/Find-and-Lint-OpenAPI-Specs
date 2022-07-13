@@ -168,7 +168,11 @@ def get_organisation_name(organisation):
     headers = {'Accept': 'application/vnd.github.v3+json'}
     r = requests.get(query_url, headers=headers, auth=(user_name, access_token))
     response = r.json()
-    return response['name']
+    if 'name' in response:
+        return response['name']
+    else:
+        return response['login']
+
 
 def get_last_commit_date(item):
     user_name = os.environ['USERNAME']
