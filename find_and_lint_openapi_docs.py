@@ -41,7 +41,10 @@ def find_apis():
                 if not is_an_archived_repository(item) and not any(
                         x in html_url for x in test_repos) and get_api_info_object(html_url):
                     info_object = get_api_info_object(html_url)
-                    api_details.append([convert_to_raw_content_url(html_url), html_url, get_api_name(info_object), get_api_description(info_object), get_api_version(info_object), get_organisation_name(organisation), get_last_commit_date(item)])
+                    api_details.append([convert_to_raw_content_url(html_url), html_url, get_api_name(info_object),
+                                        get_api_description(info_object), get_api_version(info_object),
+                                        get_organisation_name(organisation), get_last_commit_date(item),
+                                        get_api_endpoint(html_url)])
 
             # Wait to avoid hitting the GitHub API secondary rate limit
             time.sleep(20)
@@ -85,7 +88,8 @@ def is_an_archived_repository(item):
 def write_api_metadata_to_file(apis):
     output_dir = os.environ['OUTPUT_DIR']
     file_path = os.path.join(output_dir, 'descriptions.csv')
-    header = ['raw_url', 'url', 'name', 'description', 'Version of API Doc', 'org name', 'Repo last updated']
+    header = ['raw_url', 'url', 'name', 'description', 'Version of API Doc', 'org name', 'Repo last updated',
+              'endpoint']
     with open(file_path, 'w') as f:
         writer = csv.writer(f)
         writer.writerow(header)
@@ -102,21 +106,36 @@ def get_raw_openapi_content(url):
     return r.content
 
 
-def get_api_info_object(html_url):
+def get_deserialized_content(html_url):
     content = get_raw_openapi_content(html_url)
-    deserialized_content = {}
     try:
         if html_url.endswith(('.yml', '.yaml')):
-            deserialized_content = yaml.safe_load(content)
+            return yaml.safe_load(content)
         elif html_url.endswith('json'):
-            deserialized_content = json.loads(content)
+            return json.loads(content)
     except (yaml.YAMLError, json.JSONDecodeError):
         logging.info("Error while parsing OpenAPI file: " + html_url)
-        return 'N/A'
-    if 'info' in deserialized_content:
-        return deserialized_content['info']
+        return {}
+
+
+def get_api_info_object(html_url):
+    content = get_deserialized_content(html_url)
+    if 'info' in content:
+        return content['info']
     else:
         return {}
+
+
+def get_api_endpoint(html_url):
+    content = get_deserialized_content(html_url)
+    if 'servers' in content and len(content['servers']) > 0 and 'url' in content['servers'][0]:
+        servers = content['servers'][0]
+        if not content['servers'] or not content['paths'] or not servers['url'] or 'url' not in servers or len(content['paths']) == 0:
+            return 'N/A'
+        else:
+            return servers['url'] + next(iter(content['paths']))
+    else:
+        return 'N/A'
 
 
 def get_api_name(info_object):
@@ -150,7 +169,6 @@ def get_organisation_name(organisation):
     r = requests.get(query_url, headers=headers, auth=(user_name, access_token))
     response = r.json()
     return response['name']
-
 
 def get_last_commit_date(item):
     user_name = os.environ['USERNAME']
