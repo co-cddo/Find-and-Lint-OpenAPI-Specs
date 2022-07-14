@@ -217,9 +217,7 @@ def create_spreadsheet():
     no_dupes_new_df = new_df.drop_duplicates(subset='join')
     # merges no duplicated df with df on join column
     no_dupes_finaldf = pd.merge(df, no_dupes_new_df, on='join', how='left')
-    # merges df with duplicates with df on join column
-    #dupes_finaldf = pd.merge(df, new_df, on='join', how='left')
-    #dupes_finaldf['url'] = dupes_finaldf['url'].astype(str)
+
 
     # creates unique values
     uniques = no_dupes_finaldf['url'].unique()
@@ -239,8 +237,23 @@ def create_spreadsheet():
     #merges the 2 dataframes on the original
     no_dupes_finaldf = pd.merge(no_dupes_finaldf, df2, on='url', how='left')
 
-    #runs status code on the endpoint url and creates a new column
-    no_dupes_finaldf['Endpoint Status Code'] = no_dupes_finaldf['endpoint'].map(lambda x: url_ok(x)).astype(str)
+    # creates unique values for endpoint
+    endpoint_uniques = no_dupes_finaldf['endpoint'].unique()
+    # drops all nans
+    endpoint_filtered = [element for element in endpoint_uniques if str(element) != 'nan']
+
+    endpoints = []
+    for x in endpoint_filtered:
+        endpoint_checker = url_ok(x)
+        endpoints.append(endpoint_checker)
+
+    # creates a dictionary of the two lists
+    endpoint_data = {'endpoint': endpoint_filtered, 'Endpoint Status Code': endpoints}
+    # creates a 3rd data frame from the dictionary
+    df3 = pd.DataFrame.from_dict(endpoint_data)
+
+    # merges the 2 dataframes on the original
+    no_dupes_finaldf = pd.merge(no_dupes_finaldf, df3, on='endpoint', how='left')
 
     # creates 3 extra tabs
     warningsdf = createwarningstab(no_dupes_finaldf)
@@ -249,7 +262,7 @@ def create_spreadsheet():
 
     # drops redundant columns
     no_dupes_finaldf = no_dupes_finaldf.drop(columns=['Description', 'Title', 'join', 'raw_url'])
-    #dupes_finaldf = dupes_finaldf.drop(columns=['Description', 'Title', 'join', 'raw_url'])
+
 
     # no duplicates excel creation
     list_newdfs = [no_dupes_finaldf, warningsdf, APIversionsdf, pass_fail_df]
@@ -263,17 +276,7 @@ def create_spreadsheet():
         for x, y in zip(sheetnames_list, list_newdfs):
             y.to_excel(writer, sheet_name=x, index=False)
 
-    # duplicated excel creation
-    """dupes_list_newdfs = [dupes_finaldf, warningsdf, APIversionsdf, pass_fail_df]
-    dupes_sheetnames_list = ['Master Database', 'Warnings-by-url', 'API-Versions-used', 'Pass-Fail']
-    newdict2 = dict(zip(dupes_sheetnames_list, dupes_list_newdfs))
 
-    todays_date = date.today()
-    filename3 = 'Duplicated Linting-results' + str(todays_date)
-    with pd.ExcelWriter('{}.xlsx'.format(os.path.join(output_path, filename3)), engine="xlsxwriter",
-                        mode="w") as writer:
-        for x, y in zip(dupes_sheetnames_list, dupes_list_newdfs):
-            y.to_excel(writer, sheet_name=x, index=False)"""
 
     return
 
