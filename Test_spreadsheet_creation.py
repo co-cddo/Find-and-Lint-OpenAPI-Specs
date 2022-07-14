@@ -207,7 +207,7 @@ def create_spreadsheet():
     df = df.reset_index(drop=True)
 
     # input variable for csv
-    name_description = os.path.join(output_path, 'sample_descriptions - sample_descriptions copy.csv')
+    name_description = os.path.join(output_path, 'descriptions.csv')
     # creates a dataframe from it
     new_df = pd.read_csv(name_description)
     # creates join column based off url
