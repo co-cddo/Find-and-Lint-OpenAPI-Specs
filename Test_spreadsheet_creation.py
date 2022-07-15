@@ -149,7 +149,7 @@ def passfailtab(dataframe):
     Pass_fail_df["Warning Total per Row"] = pd.to_numeric(Pass_fail_df["Warning Total per Row"])
     Pass_fail_df[["Warning Total per Row", "Error Total per Row"]] = Pass_fail_df[
         ["Warning Total per Row", "Error Total per Row"]].apply(pd.to_numeric)
-    Pass_fail_df = Pass_fail_df.groupby(['Organisation', 'org name', 'Raw URL', 'last updated', 'Last update of API Doc'])[
+    Pass_fail_df = Pass_fail_df.groupby(['Organisation', 'org name', 'Raw URL', 'Repo last updated', 'Last update of API Doc'])[
         ['Error Total per Row', "Warning Total per Row"]].sum()
     Pass_fail_df.reset_index(inplace=True)
     Pass_fail_df['Pass or Fail'] = Pass_fail_df['Error Total per Row'].apply(lambda x: 'Fail' if x >= 1 else 'Pass')
