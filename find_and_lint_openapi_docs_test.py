@@ -4,7 +4,7 @@ from unittest import mock
 from unittest.mock import patch
 
 from find_and_lint_openapi_docs import convert_to_raw_content_url, is_an_archived_repository, get_api_name, \
-    get_api_description, get_organisation_name, get_api_version, get_last_commit_date
+    get_api_description, get_organisation_name, get_api_version, get_last_commit_date, get_api_info_object, get_api_endpoint
 
 
 class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
@@ -101,3 +101,19 @@ class FindAndLintOpenApiDocsTestCase(unittest.TestCase):
         result = get_last_commit_date(item)
 
         self.assertEqual('2022-05-16T10:17:54Z', result)
+
+    @patch('find_and_lint_openapi_docs.get_deserialized_content')
+    def test_get_api_info_object(self, mocked_function):
+        mocked_function.return_value = {'openapi': '3.0.1', 'info': {'title': 'Test API', 'version': '1.0.0'}}
+
+        result = get_api_info_object('https://github.com/test-org/test-api/blob/123456/openapi.yaml')
+
+        self.assertEqual({'title': 'Test API', 'version': '1.0.0'}, result)
+
+    @patch('find_and_lint_openapi_docs.get_deserialized_content')
+    def test_get_api_endpoint(self, mocked_function):
+        mocked_function.return_value = {'openapi': '3.0.1', 'info': {'title': 'Test API', 'version': '1.0.0'}, 'servers' : [{'url': 'https://example.com'}], 'paths': {'/items': {}}}
+
+        result = get_api_endpoint('https://github.com/test-org/test-api/blob/123456/openapi.yaml')
+
+        self.assertEqual('https://example.com/items', result)
